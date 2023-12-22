@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { config } from "dotenv";
-import { generateOTP, isUserExist, login, verifyOtp } from "../controllers/auth.controller.js";
+import { isUserExist, login } from "../controllers/auth.controller.js";
 import sendMail from "../utils/nodemailer.js";
+import sendMessage from "../utils/twilio.js";
+import { generateOTP, verifyOtp } from "../utils/otp.js";
 
 const router = Router();
 config();
@@ -16,7 +18,12 @@ router.post('/login', async (request, response) => {
             const value = request.body[request.query.by]
             if (await isUserExist(field, value)) {
                 const otp = await generateOTP(field, value);
-                sendMail(value, otp, response);
+                if (request.query.by === 'email') {
+                    sendMail(value, otp, response);
+                }
+                else if (request.query.by === 'phone_number') {
+                    sendMessage(value, otp, response);
+                }
             }
             else response.status(500).send({ status: false, message: "User Doesn't exist - You are accessing Signup Process" })
         }

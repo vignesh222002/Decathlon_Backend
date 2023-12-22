@@ -12,6 +12,7 @@ const transporter = nodemailer.createTransport({
 })
 
 function sendMail(toMail, otp, response) {
+    console.log("Email", to, otp);
     const mailContent = {
         from: process.env.SENDER_EMAIL,
         to: toMail,

@@ -10,11 +10,16 @@ const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
 const twilioClient = twilio(accountSID, authToken);
 
 function sendMessage(to, otp, response) {
+    console.log("Phone Number", to, otp);
     twilioClient.messages.create({
         body: `Hi, Here is your Decathlon OTP ${otp}`,
         to,
         from: twilioPhoneNumber,
     })
         .then((res) => response.status(200).send({ status: true, message: "Otp sent to your Phone Number", phone_number: to }))
-        .catch((error) => { throw new Error(error) })
+        .catch(error => {
+            throw new Error(error);
+        })
 }
+
+export default sendMessage;
