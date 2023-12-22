@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { config } from "dotenv";
-import { isUserExist, login } from "../controllers/auth.controller.js";
+import { isUserExist, login, signUp } from "../controllers/auth.controller.js";
 import sendMail from "../utils/nodemailer.js";
 import sendMessage from "../utils/twilio.js";
-import { generateOTP, verifyOtp } from "../utils/otp.js";
+import { generateOTP, saveVerifiedUser, verifyOtp } from "../utils/otp.js";
 
 const router = Router();
 config();
@@ -16,16 +16,13 @@ router.post('/login', async (request, response) => {
         try {
             const field = request.query.by;
             const value = request.body[request.query.by]
-            if (await isUserExist(field, value)) {
-                const otp = await generateOTP(field, value);
-                if (request.query.by === 'email') {
-                    sendMail(value, otp, response);
-                }
-                else if (request.query.by === 'phone_number') {
-                    sendMessage(value, otp, response);
-                }
+            const otp = await generateOTP(field, value);
+            if (request.query.by === 'email') {
+                sendMail(value, otp, response);
             }
-            else response.status(500).send({ status: false, message: "User Doesn't exist - You are accessing Signup Process" })
+            else if (request.query.by === 'phone_number') {
+                sendMessage(value, otp, response);
+            }
         }
         catch (error) {
             response.status(500).send({ status: false, error, message: error.message })
@@ -41,13 +38,27 @@ router.post('/verifyOtp', async (request, response) => {
 
     if (request.query.by === 'email' | request.query.by === 'phone_number') {
         // Body.email contains a valid email address and Body.otp contains 6 digit OTP
+        // Body.verified Optional
         try {
             const field = request.query.by;
             const value = request.body[request.query.by]
             const otp = request.body.otp;
+            // verify OTP
             if (await verifyOtp(field, value, otp)) {
-                const token = await login(field, value);
-                response.status(200).send({ status: true, token })
+                if (await isUserExist(field, value)) {
+                    const token = await login(field, value);
+                    response.status(200).send({ status: true, token })
+                }
+                else {
+                    if (request.body.email && request.body.phone_number) {
+                        let alreadyVerified = (request.query.by === 'email') ? 'phone_number' : (request.query.by === 'phone_number') && 'email'
+                        signUp(request.body.email, request.body.phone_number, alreadyVerified, response);
+                    }
+                    else {
+                        await saveVerifiedUser(field, value)
+                        response.status(200).send({ status: true, message: `${field} is verified`, [field]: value });
+                    }
+                }
             }
             else {
                 throw new Error('OTP Mismatched');
