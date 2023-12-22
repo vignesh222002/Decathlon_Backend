@@ -1,27 +1,22 @@
 import { Router } from "express";
 import { config } from "dotenv";
-import { isUserExist, login } from "../controllers/auth.controller.js";
-import { createClient } from "redis";
+import { generateOTP, isUserExist, login, verifyOtp } from "../controllers/auth.controller.js";
+import sendMail from "../utils/nodemailer.js";
 
 const router = Router();
 config();
 
-const redisClient = createClient();
-const defaultExpiration = 10;
-
-redisClient.on('error', err => console.log('Redis Client Error', err));
-
-await redisClient.connect();
-
-router.post('/auth', async (request, response) => {
+router.post('/login', async (request, response) => {
     // Query.by = 'email' | 'phone_number'
     if (request.query.by === 'email' | request.query.by === 'phone_number') {
         // Body.email contains a valid email address
 
         try {
-            if (isUserExist(request.query.by, request.body[request.query.by])) {
-                const otp = Math.floor(Math.random() * 1000000)
-                response.status(200).send(`user exist, ${otp}`)
+            const field = request.query.by;
+            const value = request.body[request.query.by]
+            if (await isUserExist(field, value)) {
+                const otp = await generateOTP(field, value);
+                sendMail(value, otp, response);
             }
             else response.status(500).send({ status: false, message: "User Doesn't exist - You are accessing Signup Process" })
         }
@@ -34,14 +29,40 @@ router.post('/auth', async (request, response) => {
     }
 })
 
-router.post('/login', async (request, response) => {
+// router.post('/login', async (request, response) => {
+//     // Query.by = 'email' | 'phone_number'
+
+//     if (request.query.by === 'email' | request.query.by === 'phone_number') {
+//         // Body.email contains a valid email address
+//         try {
+//             const token = await login(request.query.by, request.body[request.query.by])
+//             response.status(200).send({ status: true, token })
+//         }
+//         catch (error) {
+//             response.status(500).send({ status: false, error, message: error.message })
+//         }
+//     }
+//     else {
+//         response.status(500).send({ status: false, error: "Send the Query Correctly like, by = 'email' | 'phone_number'" })
+//     }
+// })
+
+router.post('/verifyOtp', async (request, response) => {
     // Query.by = 'email' | 'phone_number'
 
     if (request.query.by === 'email' | request.query.by === 'phone_number') {
-        // Body.email contains a valid email address
+        // Body.email contains a valid email address and Body.otp contains 6 digit OTP
         try {
-            const token = await login(request.query.by, request.body[request.query.by])
-            response.status(200).send({ status: true, token })
+            const field = request.query.by;
+            const value = request.body[request.query.by]
+            const otp = request.body.otp;
+            if (await verifyOtp(field, value, otp)) {
+                const token = await login(field, value);
+                response.status(200).send({ status: true, token })
+            }
+            else {
+                throw new Error('OTP Mismatched');
+            }
         }
         catch (error) {
             response.status(500).send({ status: false, error, message: error.message })
@@ -50,10 +71,6 @@ router.post('/login', async (request, response) => {
     else {
         response.status(500).send({ status: false, error: "Send the Query Correctly like, by = 'email' | 'phone_number'" })
     }
-})
-
-router.post('/verifyOtp', async (request, response) => {
-
 })
 
 // router.get('/getUser', (request, response) => {
