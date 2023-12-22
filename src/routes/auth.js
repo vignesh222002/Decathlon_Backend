@@ -29,24 +29,6 @@ router.post('/login', async (request, response) => {
     }
 })
 
-// router.post('/login', async (request, response) => {
-//     // Query.by = 'email' | 'phone_number'
-
-//     if (request.query.by === 'email' | request.query.by === 'phone_number') {
-//         // Body.email contains a valid email address
-//         try {
-//             const token = await login(request.query.by, request.body[request.query.by])
-//             response.status(200).send({ status: true, token })
-//         }
-//         catch (error) {
-//             response.status(500).send({ status: false, error, message: error.message })
-//         }
-//     }
-//     else {
-//         response.status(500).send({ status: false, error: "Send the Query Correctly like, by = 'email' | 'phone_number'" })
-//     }
-// })
-
 router.post('/verifyOtp', async (request, response) => {
     // Query.by = 'email' | 'phone_number'
 
