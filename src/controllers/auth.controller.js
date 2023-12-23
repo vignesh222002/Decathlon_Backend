@@ -37,14 +37,20 @@ export async function login(field, value) {
 
 export async function signUp(email, phone_number, alreadyVerified, response) {
     try {
-        console.log("User Added", email, phone_number, alreadyVerified);
         let redisKey = (alreadyVerified === 'email')
             ? `verified_email_${email}`
             : (alreadyVerified === 'phone_number')
             && `verified_phone_number_${phone_number}`
         const redisValue = await redisClient.get(redisKey);
         if (redisValue === 'true') {
-            response.status(200).send({ status: true, email, phone_number, alreadyVerified });
+            // Register User in DB
+            await db.query(`insert into users (phone_number, email) values ('${phone_number}', '${email}');`)
+            const token = jwt.sign(
+                { phone_number, email },
+                process.env.JWT_ACCESS_TOKEN,
+                { expiresIn: '1d' }
+            )
+            response.status(200).send({ status: true, phone_number, email, token });
         }
         else throw new Error('SignUp Process Failed, Retry');
     }

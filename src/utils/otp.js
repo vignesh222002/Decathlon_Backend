@@ -4,7 +4,7 @@ export async function generateOTP(field, value) {
     try {
         let otp = JSON.stringify(Math.floor(Math.random() * 1000000))
         while (otp.length != 6) otp = JSON.stringify(Math.floor(Math.random() * 1000000))
-        await redisClient.setEx(`otp_${field}_${value}`, 60, otp)
+        await redisClient.setEx(`otp_${field}_${value}`, 300, otp)
         return otp;
     }
     catch (error) {

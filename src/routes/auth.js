@@ -17,7 +17,6 @@ router.post('/login', async (request, response) => {
             const field = request.query.by;
             const value = request.body[request.query.by]
             const otp = await generateOTP(field, value);
-            // console.log("first", value, otp);
             if (request.query.by === 'email') {
                 sendMail(value, otp, response);
             }
