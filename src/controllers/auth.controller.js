@@ -2,6 +2,36 @@ import { db } from "../db/index.js";
 import jwt from "jsonwebtoken";
 import redisClient from "../redis/index.js";
 
+export async function validateUser(request, response, next) {
+    try {
+        const authToken = request.headers['authorization'];
+        const token = authToken ? authToken.split(" ")[1] : null;
+
+        if (!token) {
+            response.status(401).send({ status: false, message: "Token Invalid" });
+        }
+        else {
+            jwt.verify(token, process.env.JWT_ACCESS_TOKEN, async (err, result) => {
+                if (err) {
+                    response.status(403).send({ status: false, message: "Token Expired" })
+                }
+                else {
+                    let [rows, colums] = await db.query(`select count(*) as user from users where id = '${result.id}' and email = '${result.email}' and phone_number = '${result.phone_number}';`)
+                    if (rows[0].user > 0) {
+                        next();
+                    }
+                    else {
+                        throw new Error("User Doesn't Exist")
+                    }
+                }
+            })
+        }
+    }
+    catch (error) {
+        response.status(500).send({ status: false, error, message: error.message });
+    }
+}
+
 export async function isUserExist(field, value) {
     try {
         let [rows, columns] = await db.query(`select count(*) as user_exists from users where ${field} = '${value}'`)
@@ -17,7 +47,7 @@ export async function isUserExist(field, value) {
 
 export async function login(field, value) {
     try {
-        let [rows, columns] = await db.query(`SELECT phone_number, email FROM users where ${field} = '${value}';`);
+        let [rows, columns] = await db.query(`SELECT id, phone_number, email FROM users where ${field} = '${value}';`);
         if (rows.length === 0) {
             throw new Error("User doesn't Exist")
         }
@@ -25,7 +55,7 @@ export async function login(field, value) {
             const token = jwt.sign(
                 rows[0],
                 process.env.JWT_ACCESS_TOKEN,
-                { expiresIn: '1d' }
+                { expiresIn: '10d' }
             )
             return token;
         }
@@ -48,7 +78,7 @@ export async function signUp(email, phone_number, alreadyVerified, response) {
             const token = jwt.sign(
                 { phone_number, email },
                 process.env.JWT_ACCESS_TOKEN,
-                { expiresIn: '1d' }
+                { expiresIn: '10d' }
             )
             response.status(200).send({ status: true, phone_number, email, token });
         }

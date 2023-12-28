@@ -1,6 +1,6 @@
 import { db } from "../db/index.js";
 
-export async function getAllCategory(request, resultponse) {
+export async function getAllCategory(request, response) {
     try {
         let [rows, columns] = await db.query(`
         select category, sub_category, product_category, product_category.id as id from category
@@ -32,9 +32,9 @@ export async function getAllCategory(request, resultponse) {
                 }
             }
         })
-        resultponse.status(200).send(result);
+        response.status(200).send(result);
     }
     catch (error) {
-        resultponse.status(500).send({ status: false, error, message: error.message })
+        response.status(500).send({ status: false, error, message: error.message })
     }
 }
