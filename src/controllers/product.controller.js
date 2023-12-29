@@ -36,7 +36,7 @@ export async function getAllCategory(request, response) {
         response.status(200).send(result);
     }
     catch (error) {
-        response.status(500).send({ status: false, error, message: error.message })
+        response.status(500).send({ status: false, error, message: error.message });
     }
 }
 
