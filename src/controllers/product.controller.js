@@ -64,9 +64,41 @@ export async function getProductList(request, response) {
                 wishlist: Boolean(item.wishlist),
             }))
 
-            response.send({ status: true, productCategory: +(request.query.productCategory), userId: result.id, data });
+            response.status(200).send({ status: true, productCategory: +(request.query.productCategory), userId: result.id, data });
         })
     } catch (error) {
-        response.status(500).send({ status: false, error, message: error.message })
+        response.status(500).send({ status: false, error, message: error.message });
+    }
+}
+
+export async function getProduct(request, response) {
+    try {
+        const authToken = request.headers['authorization'];
+        const token = authToken ? authToken.split(" ")[1] : null;
+
+        jwt.verify(token, process.env.JWT_ACCESS_TOKEN, async (err, result) => {
+            let [rows, columns] = await db.query(`
+                select p.id, p.product_brand, p.product_name, p.original_price, p.warranty, p.discount, w.id is not null as wishlist,
+                case
+                    when count(s.source > 0) then json_arrayagg(s.source)
+                    else json_array()
+                end as source
+                from decathlon.product as p
+                left join decathlon.source as s on p.id = s.product_id
+                left join decathlon.wishlist as w on p.id = w.product_id and w.user_id = ${result.id}
+                where p.id = ${request.query.productId}
+                group by w.id;
+            `)
+
+            let data = rows.map(item => ({
+                ...item,
+                wishlist: Boolean(item.wishlist),
+            }))
+
+            response.status(200).send({ status: true, userId: result.id, data })
+        })
+    }
+    catch (error) {
+        response.status(500).send({ status: false, error, message: error.message });
     }
 }

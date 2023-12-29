@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getAllCategory, getProductList } from "../controllers/product.controller.js";
+import { getAllCategory, getProduct, getProductList } from "../controllers/product.controller.js";
 import { validateUser } from "../controllers/auth.controller.js";
 import { query } from "express-validator";
 import checkExpressValidation from '../utils/express-validator.js';
@@ -17,5 +17,12 @@ router.get('/productList', [
     checkExpressValidation,
     getProductList
 ]);
+
+router.get('/detail', [
+    validateUser,
+    query('productId').notEmpty().isNumeric(),
+    checkExpressValidation,
+    getProduct
+])
 
 export default router;
